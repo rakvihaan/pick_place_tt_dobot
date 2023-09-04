@@ -1,6 +1,6 @@
 import tkinter as tk
 import threading
-import func as f
+import func2 as f
 # import heartrate; heartrate.trace(browser=True)
 
 root = tk.Tk()
