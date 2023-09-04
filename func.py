@@ -7,17 +7,19 @@ import DobotDllType as dType
 import all_functions_file as q
 import csv
 from pynput import keyboard
+import threading
 # import sss as s
 # import heartrate; heartrate.trace(browser=True)
 
-ardu = serial.Serial(port = 'COM6', baudrate=9600, timeout = 0.1)
 
-# database_file = "d_database_1.csv"
-database_file = "\d_database_1.csv"
+
+ardu = serial.Serial(port = 'COM9', baudrate=9600, timeout = 0.1)
+
+database_file = "d_database_1.csv"
 accu_state = 0
 # q.create_empty_csv(12,4)
 dobot_max_h = 115
-dobot_min_h = 20
+dobot_min_h = 15
 
 
 def writee(state):
@@ -68,7 +70,7 @@ if (state == dType.DobotConnect.DobotConnect_NoError):
 	dType.SetHOMEParams(api, 200, 200, 200, 200, isQueued = 1)
 	dType.SetPTPJointParams(api, 400, 400, 400, 400, 400, 400, 400, 400, isQueued = 1)
 	dType.SetPTPCommonParams(api, 100, 100, isQueued = 1)
-	dType.SetPTPJumpParams(api, 0, 200, isQueued = 1)
+	dType.SetPTPJumpParams(api, 0, 0)
 	pos = dType.GetPose(api)
 	x = pos[0]
 	y = pos[1]
@@ -98,7 +100,7 @@ if (state == dType.DobotConnect.DobotConnect_NoError):
 # initpos = [232,76,12,45]
 # dpressed = False
 
-def toxy(x1,y1,z1,z2,sd):
+def toxy(x1,y1,z1,z2,rr,sd):
 	# global x,y,z
 	if (state == dType.DobotConnect.DobotConnect_NoError):
 		pos = dType.GetPose(api)
@@ -107,15 +109,19 @@ def toxy(x1,y1,z1,z2,sd):
 		z = pos[2]
 		dType.SetQueuedCmdClear(api)
 		# indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x+1, y+1, z+1, rHead, 1)[0]
+		# indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, z, rr, 1)[0]
 		if x >180:
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, sd[y1], dobot_max_h, rHead, 1)[0]
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z1, rHead, 1)[0]
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z2, rHead, 1)[0]
+			
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, sd[y1], dobot_max_h, rr, 1)[0]
+			# indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, dobot_max_h, rr, 1)[0]
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z1, rr, 1)[0]
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z2, rr, 1)[0]
 		
 		elif x <=180:
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], y, dobot_max_h, rHead, 1)[0]
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z1, rHead, 1)[0]
-			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z2, rHead, 1)[0]
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], y, dobot_max_h, rr, 1)[0]
+			# indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, dobot_max_h, rr, 1)[0]
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z1, rr, 1)[0]
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, sd[x1], sd[y1], z2, rr, 1)[0]
 		
 		
 		dType.SetQueuedCmdStartExec(api)
@@ -126,6 +132,28 @@ def toxy(x1,y1,z1,z2,sd):
 		# print("sdf")
 		dType.SetQueuedCmdStopExec(api)	
 		# print("Asd")
+
+def tor(mode):
+	# global x,y,z
+	if (state == dType.DobotConnect.DobotConnect_NoError):
+		pos = dType.GetPose(api)
+		x = pos[0]
+		y = pos[1]
+		z = pos[2]
+		rr = pos[3]
+		dType.SetQueuedCmdClear(api)
+		if mode ==1:
+			if rr >= 0:  
+				indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, z, -150, 1)[0]
+			elif rr < 0:
+				indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, z, 150, 1)[0]
+		elif mode ==2:
+			indexx = dType.SetPTPCmd(api, dType.PTPMode.PTPJUMPXYZMode, x, y, z, 0, 1)[0]
+		
+		dType.SetQueuedCmdStartExec(api)
+		while indexx > dType.GetQueuedCmdCurrentIndex(api)[0]:
+			dType.dSleep(100)
+		dType.SetQueuedCmdStopExec(api)	
 
 
 def dobottttt():
@@ -176,11 +204,11 @@ def dobot_scan(tid,sxm,sym):
 	
 	sd = [sx,sy,b_dx,b_dy]
 	# print(sd)
-	toxy(0,1,dobot_max_h,dobot_min_h,sd)
+	toxy(0,1,dobot_max_h,dobot_min_h,0,sd)
 	writee("c")
 	time.sleep(0.25)
 
-	toxy(2,3,dobot_max_h,dobot_max_h,sd) #getting to barcode scanner position
+	toxy(2,3,dobot_max_h,dobot_max_h,0,sd) #getting to barcode scanner position
 
 	# wait for scanning
 	
@@ -216,6 +244,7 @@ def dobot_scan(tid,sxm,sym):
 		dest_ym = temp_slot[0]
 		dy = y2+(dest_xm*dist)
 		dx = x2-(dest_ym*dist)
+		print(cfgg.tray_comp)
 	elif td_id == 3:
 		temp_slot = get_emp_slot(cfgg.tray_isComp)
 		cfgg.tray_isComp[temp_slot[0]][temp_slot[1]] = tt_data
@@ -223,13 +252,15 @@ def dobot_scan(tid,sxm,sym):
 		dest_ym = temp_slot[1]
 		dx = x3-(dest_xm*dist)
 		dy = y3+(dest_ym*dist)
+		print(cfgg.tray_isComp)
 
 	sd = [b_dx,b_dy,dx,dy]	
-	toxy(2,3,dobot_max_h,dobot_min_h,sd)
+	toxy(2,3,dobot_max_h,dobot_min_h,0,sd)
 	# print(sd)
 	writee("o")
 	time.sleep(0.25)
-	toxy(2,3,dobot_max_h,dobot_max_h,sd)
+	toxy(2,3,dobot_max_h,dobot_max_h,0,sd)
+	# print()
 
 
 def setptp():
@@ -308,12 +339,42 @@ def save_tray_data(timestamp,tray_list,typee):
 	for i in range(0,len(tray_list)):
 		writer.writerow({'A':tray_list[i][0], 'B':tray_list[i][1], 'C':tray_list[i][2], 'D':tray_list[i][3]})
 
+################################################################
+r=0
+key_pressed = False
+terminate_flag = False
+
+
+def no_key_pressed_action():
+	global r
+	# r = r+1
+	tor(1)
+	time.sleep(0.5)
+	print(r)
+
+
+def key_check_timer():
+	global terminate_flag
+	while not terminate_flag:
+		if not key_pressed:
+			no_key_pressed_action()
+
+		time.sleep(1)
+		pass
+
+def terminate_thread():
+    global terminate_flag
+    terminate_flag = True
 
 barcode=""
 temp_bar = ""
 
+# key_check_thread = threading.Thread(target=key_check_timer)
+# key_check_thread.daemon = True
+# key_check_thread.start()
+
 def on_press(key,listener):
-	global barcode,temp_bar
+	global barcode,temp_bar,r
 	# global barcode
 	# print("sdf")
 	try:
@@ -322,29 +383,40 @@ def on_press(key,listener):
 			barcode=""
 			# print(temp_bar)
 			writee('n')
+			tor(2)
 			listener.stop()
+			# r=0
 		else:
 			barcode+=key.char
+			terminate_thread()
+			key_check_thread.join()
 			# writee('n')
 	except:
 		pass
 
 # import threading
-r=0
+# r=0
 def read_barcode():
-	global barcode,temp_bar
+	global barcode,temp_bar,key_pressed,terminate_flag
+	key_pressed = False
+	terminate_flag = False
 	# print("sdf")
 	writee('b')
+	key_check_thread = threading.Thread(target=key_check_timer)
+	key_check_thread.daemon = True
+	key_check_thread.start()
 	with keyboard.Listener(on_press=lambda event:on_press(event,listener)) as listener:
 		try:
 			listener.join()
+			
 			# writee('n')
 			return temp_bar
 		except:
-			r=r+1
+			# r=r+1
 			print(r)
 # keep_barcode = threading.Thread(traget=read_barcode())
 # keep_barcode.setDaemon(True)
 # keep_barcode.start()
 
 # read_barcode()
+
